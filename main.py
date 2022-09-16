@@ -2,15 +2,23 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import OrdinalEncoder
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 
 # CONSTS #
 SEED = 73
 DF_READY = "preprocess_dataset.csv"
+RESULTS_FOLDER = "results"
 # CONSTS #
+
+
+def os_prepare():
+    try:
+        os.mkdir(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER))
+    except:
+        pass
 
 
 def load_data():
@@ -73,7 +81,13 @@ def test_model(df: pd.DataFrame,
                                                             df[y_col],
                                                             test_size=0.2,
                                                             random_state=SEED)
-        model = DecisionTreeClassifier(max_depth=6)
+        model = GridSearchCV(RandomForestClassifier(),
+                             {
+                                 "max_depth": [3, 6],
+                                 #"criterion": ["gini", "entropy"],
+                                 "ccp_alpha": [0, 0.01, 0.05]
+                             },
+                             verbose=2)
         model.fit(x_train,
                   y_train)
         train_score = model.score(x_train, y_train)
@@ -81,11 +95,21 @@ def test_model(df: pd.DataFrame,
         print("y={} | train = {}, test = {}".format(y_col,
                                                     train_score,
                                                     test_score))
+        forest_importances = pd.Series(model.best_estimator_.feature_importances_, index=list(x_train))
+        fig, ax = plt.subplots()
+        forest_importances.plot.bar(ax=ax)
+        ax.set_title("{} - Tr={:.3f},Ts={:.3f}".format(y_col, train_score, test_score))
+        #ax.set_xlabel("Feature")
+        ax.set_ylabel("Feature importance")
+        fig.tight_layout()
+        plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, "feature_important_{}.png".format(y_col)), dpi=400)
+        plt.close()
     except Exception as error:
         print("Cannot compute '{}' due to {}".format(y_col, error))
 
 
 def run():
+    os_prepare()
     df = load_data()
     [test_model(df=df, y_col=col) for col in list(df)]
 
