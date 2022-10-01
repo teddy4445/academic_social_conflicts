@@ -24,8 +24,8 @@ class Hypothesis:
 
     @staticmethod
     def all_tests(df: pd.DataFrame):
-        #Hypothesis.general_stats(df=df)
-        #[Hypothesis.test_model(df=df, y_col=col) for col in list(df)]
+        Hypothesis.general_stats(df=df)
+        [Hypothesis.test_model(df=df, y_col=col) for col in list(df)]
         Hypothesis.conflict_minimal(df=df)
         Hypothesis.test_2(df=df)
         Hypothesis.test_3(df=df)
@@ -35,14 +35,14 @@ class Hypothesis:
         # just for view
         only_conflict = df[df["master_conflict"] == 1]
 
-        new_df = df[["gender", "country", "master_advisors", "master_conflict", "master_advisor_gender"]]
+        new_df = df[["gender", "country", "field", "master_advisors", "master_conflict", "master_advisor_gender"]]
         new_df["same_gender"] = new_df["gender"] == new_df["master_advisor_gender"]
         new_df.drop(["master_advisor_gender"], axis=1, inplace=True)
         Hypothesis.test_model(df=new_df,
                               y_col="master_conflict",
                               prefix_same="conflict_minimal_")
 
-        new_df = df[["gender", "country", "phd_advisors", "phd_conflict", "phd_advisor_gender"]]
+        new_df = df[["gender", "country", "field", "phd_advisors", "phd_conflict", "phd_advisor_gender"]]
         new_df["same_gender"] = new_df["gender"] == new_df["phd_advisor_gender"]
         new_df.drop(["phd_advisor_gender"], axis=1, inplace=True)
         Hypothesis.test_model(df=new_df,

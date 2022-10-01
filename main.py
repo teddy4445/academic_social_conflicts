@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sn
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import train_test_split, GridSearchCV
 
@@ -48,13 +49,17 @@ class Main:
     def load_data():
         if os.path.exists(DF_READY):
             return pd.read_csv(DF_READY)
-        df = pd.read_csv("Research disagreements questionnaire  (Responses) - Form responses 1.csv")
+        df = pd.read_csv("data.csv")
         df = Main.fix_names(df=df)
         return df
 
     @staticmethod
     def fix_names(df: pd.DataFrame):
-        df.drop(["Timestamp", "Email address"], axis=1, inplace=True)
+        try:
+            df.drop(["Timestamp", "Email address"], axis=1, inplace=True)
+        except Exception as error:
+            pass
+
         mapper = {
             "1) Gender": "gender",
             "2) Age": "age",
@@ -83,14 +88,15 @@ class Main:
             "25) Did you add someone to a paper without him\\her contributing at all (or not enough to be named an author)? ": "add_peer",
             "26) How often do you ask authors to cite you as part of a review process?": "cite_reviewer",
             "27) How often do you cite your colleagues even when the citation is not entirely scientifically warranted?": "cite_friends",
-            "28) How often a co-author raise demands or claims to get more credit in a paper, usually with a treat of delaying the paper's submission/publication?": "peer_conflict",
+            "28) How often a co-author raise demands or claims to get more credit in a paper, usually with a treat of delaying the paper's submission/publication?": "peer_conflict_raise",
             "29)  How many times do you update a papers' authors list based on co-authors' demands and NOT BASED ON CHANGES IN THE CONTRIBUTION of the authors?": "peer_conflict_delay",
             "30) How often do you have to demand to get more credit for you work in a research?": "self_demand"
         }
         df = df.rename(columns=mapper)
 
         df["gender"] = df["gender"].replace({"Male": 0,
-                                             "Female": 1})
+                                             "Female": 1,
+                                             "Prefer not to say": 0})
         df["age"] = df["age"].replace({"26-35": 31,
                                        "18-25": 21,
                                        "46-55": 51,
@@ -101,38 +107,104 @@ class Main:
                                              "Second (Master)": 2,
                                              "Third (Ph.D. \\ MD)": 3,
                                              "Professor": 4})
-        df["field"] = df["field"].replace({})  # TODO: later
-        df["only_academia"] = df["only_academia"].replace({"No": 0, "Yes": 1})
-        df["academic_age"] = df["academic_age"].replace({"3-5": 4, "1-2": 1, "0": 0, "10-20": 15, "6-9": 7, "20+": 20})
-        df["country"] = df["country"].replace() # TODO: later
+        df["only_academia"] = df["only_academia"].replace({"No": 0,
+                                                           "Yes": 1})
+        df["only_academia"] = [0 if val not in [0, 1] else 0 for val in df["only_academia"]]
+        df["academic_age"] = df["academic_age"].replace({"3-5": 4,
+                                                         "1-2": 1,
+                                                         "0": 0,
+                                                         "10-20": 15,
+                                                         "6-9": 7,
+                                                         "20+": 20})
         df["project_count"] = df["project_count"].replace({"0": 0,
                                                            "1": 1,
                                                            "2": 2,
                                                            "3": 3,
                                                            "4": 4,
                                                            "5+": 5})
-        df["coauthorship_papers"] = df["coauthorship_papers"].replace()  # TODO: later
-        df["solo_papers"] = df["solo_papers"].replace()  # TODO: later
-        df["master_advisors"] = df["master_advisors"].replace()  # TODO: later
-        df["phd_advisors"] = df["phd_advisors"].replace()  # TODO: later
-        df["phd_papers"] = df["phd_papers"].replace()  # TODO: later
-        df["master_advisor_age"] = df["master_advisor_age"].replace()  # TODO: later
-        df["master_advisor_title"] = df["master_advisor_title"].replace()  # TODO: later
-        df["master_advisor_gender"] = df["master_advisor_gender"].replace()  # TODO: later
-        df["master_conflict"] = df["master_conflict"].replace()  # TODO: later TODO: later
-        df["phd_advisor_age"] = df["phd_advisor_age"].replace()  # TODO: later TODO: later
-        df["phd_advisor_gender"] = df["phd_advisor_gender"].replace()  # TODO: later later
-        df["phd_conflict"] = df["phd_conflict"].replace()  # TODO: later TODO: later later
-        df["phd_advisor_title"] = df["phd_advisor_title"].replace()  # TODO: laterer later
-        df["peer_conflict"] = df["peer_conflict"].replace()  # TODO: laterO: laterer later
-        df["add_peer"] = df["add_peer"].replace({"Yes": 1, "No": 0})
-        df["cite_reviewer"] = df["cite_reviewer"].replace()  # TODO: laterO: laterer later
-        df["cite_friends"] = df["cite_friends"].replace()  # TODO: laterO: laterer laterer
-        df["peer_conflict"] = df["peer_conflict"].replace()  # TODO: laterO: laterer later
-        df["peer_conflict_delay"] = df["peer_conflict_delay"].replace()  # TODO: laterO: laterer later
-        df["second_field"] = df["second_field"].replace()  # TODO: laterO: laterer later
+        df["coauthorship_papers"] = df["coauthorship_papers"].replace({"0": 0,
+                                                                       "1": 1,
+                                                                       "2-5": 3,
+                                                                       "5-10": 7,
+                                                                       "10+": 10})
+        df["solo_papers"] = df["solo_papers"].replace({"0": 0,
+                                                       "1": 1,
+                                                       "2-5": 3,
+                                                       "5-10": 7,
+                                                       "10+": 10})
+        df["master_advisors"] = df["master_advisors"].replace({"1": 1,
+                                                               "2": 2,
+                                                               "3+": 3,
+                                                               "I did a direct Ph.D.": 0})
+        df["master_advisors"] = [val if isinstance(val, int) else 0 for val in df["master_advisors"]]
+        df["phd_advisors"] = df["phd_advisors"].replace({"1": 1,
+                                                         "2": 2,
+                                                         "3+": 3})
+        df["master_papers"] = df["master_papers"].replace({"0": 0, "1": 1, "2": 2, "3+": 3})
+        df["phd_papers"] = df["phd_papers"].replace({"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5+": 5})
+        df["master_advisor_age"] = df["master_advisor_age"].replace({"Younger than me": -1,
+                                                                     "0-5": 3,
+                                                                     "5-10": 7,
+                                                                     "10-20": 15,
+                                                                     "20-40": 30,
+                                                                     "40+": 40})
+        df["master_advisor_title"] = df["master_advisor_title"].replace({"Dr.": 0, "Prof.": 1})
+        df["master_advisor_gender"] = df["master_advisor_gender"].replace({"Male": 1,
+                                                                           "Female": 0})
+        df["master_conflict"] = df["master_conflict"].replace({"Yes": 1,
+                                                               "No": 0})
+        df["phd_advisor_age"] = df["phd_advisor_age"].replace({"Younger than me": -1,
+                                                               "0-5": 3,
+                                                               "5-10": 7,
+                                                               "10-20": 15,
+                                                               "20-40": 30,
+                                                               "40+": 40})
+        df["phd_advisor_gender"] = df["phd_advisor_gender"].replace({"Male": 1,
+                                                                     "Female": 0})
+        df["phd_conflict"] = df["phd_conflict"].replace({"Yes": 1,
+                                                         "No": 0})
+        df["phd_conflict"] = [0 if val not in [0, 1] else 0 for val in df["phd_conflict"]]
 
-        df.dropna(inplace=True)
+        df["phd_advisor_title"] = df["phd_advisor_title"].replace({"Dr.": 0, "Prof.": 1})
+        df["peer_conflict"] = [val.split(",")[0] if "," in val else val for val in df["peer_conflict"]]
+        df["peer_conflict"] = df["peer_conflict"].replace({"No": 0,
+                                                           "Yes - They were from the same *field of study* as I am": 1,
+                                                           "Yes - They were from the same *institute* as I am": 2,
+                                                           "Yes - They were from the same *country* as I am": 3,
+                                                           "Yes - They were from the same *gender* as I am": 4})
+        df["add_peer"] = df["add_peer"].replace({"Yes": 1, "No": 0})
+        df["cite_reviewer"] = df["cite_reviewer"].replace({"Only when absolutely relevant and warranted": 0,
+                                                           "When relevant but not necessarily \"a must\"": 1,
+                                                           "When in the general scope of the work": 2,
+                                                           "Whenever I can": 3})
+        df["cite_friends"] = df["cite_friends"].replace({"Only when absolutely relevant and warranted": 0,
+                                                         "When relevant but not necessarily \"a must\"": 1,
+                                                         "When in the general scope of the work": 2,
+                                                         "Whenever I can": 3})
+        df["peer_conflict_raise"] = df["peer_conflict_raise"].replace({"All the time": 3,
+                                                                       "Often": 2,
+                                                                       "Rarely": 1,
+                                                                       "Never": 0})
+        df["peer_conflict_delay"] = df["peer_conflict_delay"].replace({"All the time": 3,
+                                                                       "Often": 2,
+                                                                       "Rarely": 1,
+                                                                       "Never": 0})
+        df["second_field"] = df["second_field"].replace({"All the time": 3,
+                                                         "Often": 2,
+                                                         "Rarely": 1,
+                                                         "Never": 0})
+        df["self_demand"] = df["self_demand"].replace({"All the time": 3,
+                                                       "Often": 2,
+                                                       "Rarely": 1,
+                                                       "Never": 0})
+
+        df["field"] = OrdinalEncoder().fit_transform(df["field"].values.reshape(-1,1))
+        df["country"] = OrdinalEncoder().fit_transform(df["country"].values.reshape(-1,1))
+        df.dropna(axis=1,
+                  how='all',
+                  inplace=True)
+        df.drop(["second_field"], axis=1, inplace=True)
+        df.dropna(axis=0, how="any", inplace=True)
         df.to_csv(DF_READY, index=False)
         return df
 
