@@ -44,6 +44,10 @@ class Main:
             os.mkdir(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, DT_FOLDER))
         except:
             pass
+        try:
+            os.mkdir(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO))
+        except:
+            pass
 
     @staticmethod
     def load_data():
@@ -109,7 +113,7 @@ class Main:
                                              "Professor": 4})
         df["only_academia"] = df["only_academia"].replace({"No": 0,
                                                            "Yes": 1})
-        df["only_academia"] = [0 if val not in [0, 1] else 0 for val in df["only_academia"]]
+        df["only_academia"] = [0 if val not in [0, 1] else val for val in df["only_academia"]]
         df["academic_age"] = df["academic_age"].replace({"3-5": 4,
                                                          "1-2": 1,
                                                          "0": 0,
@@ -163,7 +167,7 @@ class Main:
                                                                      "Female": 0})
         df["phd_conflict"] = df["phd_conflict"].replace({"Yes": 1,
                                                          "No": 0})
-        df["phd_conflict"] = [0 if val not in [0, 1] else 0 for val in df["phd_conflict"]]
+        df["phd_conflict"] = [0 if val not in [0, 1] else val for val in df["phd_conflict"]]
 
         df["phd_advisor_title"] = df["phd_advisor_title"].replace({"Dr.": 0, "Prof.": 1})
         df["peer_conflict"] = [val.split(",")[0] if "," in val else val for val in df["peer_conflict"]]
@@ -198,8 +202,10 @@ class Main:
                                                        "Rarely": 1,
                                                        "Never": 0})
 
-        df["field"] = OrdinalEncoder().fit_transform(df["field"].values.reshape(-1,1))
-        df["country"] = OrdinalEncoder().fit_transform(df["country"].values.reshape(-1,1))
+        df["major_field"] = Main.reduce_field(list(df["field"]))
+
+        df["field"] = OrdinalEncoder().fit_transform(df["field"].values.reshape(-1, 1))
+        df["country"] = OrdinalEncoder().fit_transform(df["country"].values.reshape(-1, 1))
         df.dropna(axis=1,
                   how='all',
                   inplace=True)
@@ -207,6 +213,56 @@ class Main:
         df.dropna(axis=0, how="any", inplace=True)
         df.to_csv(DF_READY, index=False)
         return df
+
+    @staticmethod
+    def reduce_field(data: list):
+        all_options = set(data)
+        print(all_options)
+        # 0 - exact, 1 - social, 2 - nature, 3 - eng, 4 - other
+        mapper = {
+            'Neuroscience': 0,
+            'Politics': 1,
+            'Applied physics': 0,
+            'History': 1,
+            'Mechanical engineering': 3,
+            'Process/Chemical engineering': 3,
+            'Oncology': 4,
+            'Environmental science': 2,
+            'Nano/Micro science': 0,
+            'Social sciences': 1,
+            'Management': 1,
+            'Sociology': 1,
+            'Civil engineering': 3,
+            'Philosophy': 2,
+            'Basic biology': 0,
+            'Plant production and environmental agriculture': 3,
+            'Law': 1,
+            'Agricultural science in society and economy': 2,
+            'Computer Science (CS)': 0,
+            'Chemistry': 0,
+            'Clinical internal medicine': 4,
+            'Linguistics': 1,
+            'Nursing': 4,
+            'Genome science': 2,
+            'Clinical surgery': 4,
+            'Psychology': 1,
+            'Physics': 0,
+            'Electrical and electronic engineering': 3,
+            'Basic medicine': 4,
+            'Mathematics': 0,
+            'Boundary medicine': 4,
+            'Dentistry': 4,
+            'Biological Science': 2,
+            'Literature': 1,
+            'Material engineering': 3,
+            'Anthropology': 1,
+            'Architecture and building engineering': 3,
+            'Economics': 1,
+            'Animal life science': 4,
+            'Pharmacy': 4,
+            'Informatics': 0
+        }
+        return [mapper[val] for val in data]
 
 
 if __name__ == '__main__':

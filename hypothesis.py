@@ -24,11 +24,11 @@ class Hypothesis:
 
     @staticmethod
     def all_tests(df: pd.DataFrame):
-        Hypothesis.general_stats(df=df)
-        [Hypothesis.test_model(df=df, y_col=col) for col in list(df)]
-        Hypothesis.conflict_minimal(df=df)
-        Hypothesis.test_2(df=df)
-        Hypothesis.test_3(df=df)
+        #Hypothesis.general_stats(df=df)
+        #[Hypothesis.test_model(df=df, y_col=col) for col in list(df)]
+        #Hypothesis.conflict_minimal(df=df)
+        Hypothesis.working_in_academic_influence(df=df)
+        Hypothesis.reduced_field_on_conflicts(df=df)
 
     @staticmethod
     def conflict_minimal(df: pd.DataFrame):
@@ -50,12 +50,51 @@ class Hypothesis:
                               prefix_same="conflict_minimal_")
 
     @staticmethod
-    def test_2(df: pd.DataFrame):
-        pass
+    def working_in_academic_influence(df: pd.DataFrame):
+        for source_col in "academic_age,only_academia".split(","):
+            for name in "add_peer,cite_reviewer,cite_friends,peer_conflict_raise,peer_conflict_delay,self_demand".split(","):
+                plt.bar(df[source_col].unique(),
+                        [(df[df[source_col] == val][name] != 0).sum() / (df[df[source_col] == val][name] != 0).count() for val in df[source_col].unique()],
+                        width=0.8,
+                        color="black")
+                plt.xlabel(source_col)
+                plt.ylabel(name)
+                plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "{}_dist_{}.png".format(source_col,
+                                                                                                                       name)),
+                            dpi=400)
+                plt.close()
+
+        plt.bar(df["master_advisors"].unique(),
+                [(df[df["master_advisors"] == val]["master_papers"]).sum() / (df[df["master_advisors"] == val]["master_papers"]).count() for val in df["master_advisors"].unique()],
+                width=0.8,
+                color="black")
+        plt.xlabel("Number of Master advisors")
+        plt.ylabel("Papers on average")
+        plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "master_paper_on_average.png"), dpi=400)
+        plt.close()
+
+        plt.bar(df["phd_advisors"].unique(),
+                [(df[df["phd_advisors"] == val]["phd_papers"]).sum() / (df[df["phd_advisors"] == val]["phd_papers"]).count() for val in df["phd_advisors"].unique()],
+                width=0.8,
+                color="black")
+        plt.xlabel("Number of Ph.D. advisors")
+        plt.ylabel("Papers on average")
+        plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "phd_paper_on_average.png"), dpi=400)
+        plt.close()
 
     @staticmethod
-    def test_3(df: pd.DataFrame):
-        pass
+    def reduced_field_on_conflicts(df: pd.DataFrame):
+        ticks = ["Exact", "Social", "Nature", "Eng.", "Medicine"]
+        for col in ["master_conflict", "phd_conflict"]:
+            plt.bar(df["major_field"].unique(),
+                    [(df[df["major_field"] == val][col]).sum() / (df[df["major_field"] == val][col]).count() for val in df["major_field"].unique()],
+                    width=0.8,
+                    color="black")
+            plt.xticks(range(len(ticks)), ticks)
+            plt.xlabel("Field")
+            plt.ylabel("Conflicts")
+            plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "field_{}.png".format(col)), dpi=400)
+            plt.close()
 
     @staticmethod
     def test_model(df: pd.DataFrame,
