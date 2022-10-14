@@ -48,6 +48,10 @@ class Main:
             os.mkdir(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO))
         except:
             pass
+        try:
+            os.mkdir(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, ARIEL_HYPO))
+        except:
+            pass
 
     @staticmethod
     def load_data():
@@ -203,9 +207,11 @@ class Main:
                                                        "Never": 0})
 
         df["major_field"] = Main.reduce_field(list(df["field"]))
+        df["reduced_location"] = Main.reduced_location(list(df["country"]))
 
         df["field"] = OrdinalEncoder().fit_transform(df["field"].values.reshape(-1, 1))
         df["country"] = OrdinalEncoder().fit_transform(df["country"].values.reshape(-1, 1))
+
         df.dropna(axis=1,
                   how='all',
                   inplace=True)
@@ -213,6 +219,12 @@ class Main:
         df.dropna(axis=0, how="any", inplace=True)
         df.to_csv(DF_READY, index=False)
         return df
+
+    @staticmethod
+    def reduced_location(data: list):
+        mapper_df = pd.read_csv(os.path.join(os.path.dirname(__file__), HELP_DATA_FOLDER, "country_reduce.csv"))
+        mapper = {row["Country"]: row["Continent"] for row_index, row in mapper_df.iterrows()}
+        return [mapper[val] for val in data]
 
     @staticmethod
     def reduce_field(data: list):
