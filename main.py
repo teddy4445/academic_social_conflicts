@@ -272,6 +272,7 @@ class Main:
             'Economics': 1,
             'Animal life science': 4,
             'Pharmacy': 4,
+            'Society medicine': 4,
             'Informatics': 0
         }
         return [mapper[val] for val in data]

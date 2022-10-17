@@ -27,7 +27,7 @@ class Hypothesis:
 
     @staticmethod
     def all_tests(df: pd.DataFrame):
-        # Hypothesis.general_stats(df=df)
+        Hypothesis.general_stats(df=df)
         # [Hypothesis.test_model(df=df, y_col=col) for col in list(df)]
         # Hypothesis.conflict_minimal(df=df)
         # Hypothesis.working_in_academic_influence(df=df)
@@ -98,9 +98,9 @@ class Hypothesis:
 
     @staticmethod
     def reduced_field_on_conflicts(df: pd.DataFrame):
-
+        field_counts = [len(df[df["major_field"] == val]) for val in df["major_field"].unique()]
         plt.bar(df["major_field"].unique(),
-                [len(df[df["major_field"] == val]) for val in df["major_field"].unique()],
+                field_counts,
                 width=0.8,
                 color="black")
         plt.xlabel("Field", fontsize=16, weight="bold")
@@ -108,11 +108,11 @@ class Hypothesis:
         plt.tight_layout()
         plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "field_counts.png"), dpi=400)
         plt.close()
+        print(" and ".join(["{}:{}".format(val, field_counts[i]) for i, val in enumerate(df["major_field"].unique())]))
 
         ticks = ["Exact", "Social", "Nature", "Eng.", "Medicine"]
         for col in ["master_conflict", "phd_conflict", "add_peer", "cite_reviewer",
                     "cite_friends", "peer_conflict_raise", "peer_conflict_delay"]:
-
             plt.errorbar(df["major_field"].unique(),
                          [(df[df["major_field"] == val][col]).mean() for val in df["major_field"].unique()],
                          [(df[df["major_field"] == val][col]).std() for val in df["major_field"].unique()],
@@ -122,8 +122,8 @@ class Hypothesis:
                          color="black")
 
             plt.xticks(range(len(ticks)), ticks)
-            plt.xlabel("Field")
-            plt.ylabel("Conflicts")
+            plt.xlabel("Field", fontsize=16, weight="bold")
+            plt.ylabel("{}".format(col.replace("_", " ")), fontsize=16, weight="bold")
             plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, LIZA_HYPO, "field_{}.png".format(col)),
                         dpi=400)
             plt.close()
@@ -142,7 +142,8 @@ class Hypothesis:
         plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, ARIEL_HYPO, "reduced_location_counts.png"),
                     dpi=400)
         plt.close()
-        print(" and ".join(["{}:{}".format(val, location_counts[i]) for i, val in enumerate(df["reduced_location"].unique())]))
+        print(" and ".join(
+            ["{}:{}".format(val, location_counts[i]) for i, val in enumerate(df["reduced_location"].unique())]))
 
         ticks = ["Africa", "Asia", "Europe", "North America", "Oceania", "South America"]
         for col in ["master_conflict", "phd_conflict", "add_peer", "cite_reviewer",
@@ -168,30 +169,34 @@ class Hypothesis:
             ",")
         with open(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, ARIEL_HYPO,
                                "tree_socio_researcher_on_conflicts.csv"), "w") as ans_file:
+            ans_file.write("col,train_r2,train_mae,train_mse,test_r2,test_mae,test_mse,feature_importance\n")
             for y_col in ["master_conflict", "phd_conflict", "add_peer", "cite_reviewer",
                           "cite_friends", "peer_conflict_raise", "peer_conflict_delay"]:
                 # print pairplot
-                rf = RandomForestClassifier(max_depth=5)
+                rf = RandomForestClassifier(max_depth=3)
                 x = df[x_cols]
                 y = df[y_col]
                 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=73)
                 rf.fit(x_train, y_train)
                 y_train_pred = rf.predict(x_train)
-                train_r2 = r2_score(y_true=y_train, y_pred=y_train_pred)
+                train_r2 = abs(r2_score(y_true=y_train, y_pred=y_train_pred))
                 train_mae = mean_absolute_error(y_true=y_train, y_pred=y_train_pred)
                 train_mse = mean_squared_error(y_true=y_train, y_pred=y_train_pred)
                 y_test_pred = rf.predict(x_test)
-                test_r2 = r2_score(y_true=y_test, y_pred=y_test_pred)
+                test_r2 = abs(r2_score(y_true=y_test, y_pred=y_test_pred))
                 test_mae = mean_absolute_error(y_true=y_test, y_pred=y_test_pred)
                 test_mse = mean_squared_error(y_true=y_test, y_pred=y_test_pred)
-                ans_file.write("col={}, train_r2={:.4f}, train_mae={:.4f}, train_mse={:.4f}"
-                               ", test_r2={:.4f}, test_mae={:.4f}, test_mse={:.4f}\n".format(y_col,
-                                                                                             train_r2,
-                                                                                             train_mae,
-                                                                                             train_mse,
-                                                                                             test_r2,
-                                                                                             test_mae,
-                                                                                             test_mse))
+
+                feature_importance_text = ["{}:{:.3f}".format(col, rf.feature_importances_[index]/sum(rf.feature_importances_)) for index, col in enumerate(list(x_train))]
+
+                ans_file.write("{},{:.4f},{:.4f}{:.4f},{:.4f},{:.4f},{:.4f},{}\n".format(y_col,
+                                                                                         train_r2,
+                                                                                         train_mae,
+                                                                                         train_mse,
+                                                                                         test_r2,
+                                                                                         test_mae,
+                                                                                         test_mse,
+                                                                                         "& ".join(feature_importance_text)))
 
     @staticmethod
     def linear_socio_researcher_on_conflicts(df: pd.DataFrame):
@@ -267,6 +272,10 @@ class Hypothesis:
 
     @staticmethod
     def general_stats(df: pd.DataFrame):
+
+        print("Unique countries: {}".format(len(set(df["country"]))))
+        print("Unique fields of research: {}".format(len(set(df["field"]))))
+
         for method in ["pearson", "spearman"]:
             corr_metrix = df.corr(method=method)
             sn.heatmap(corr_metrix,
@@ -281,6 +290,24 @@ class Hypothesis:
             plt.savefig(
                 os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, "{}_heatmap_zoomin.png".format(method)),
                 dpi=500)
+            plt.close()
+
+        for method in ["pearson", "spearman"]:
+            corr_metrix = df.iloc[:,:10].corr(method=method)
+            sn.heatmap(corr_metrix,
+                       vmax=1,
+                       vmin=-1,
+                       annot=True)
+            plt.savefig(os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, "socio_{}_heatmap.png".format(method)),
+                        dpi=500)
+            plt.tight_layout()
+            plt.close()
+            sn.heatmap(corr_metrix.replace(1, 0),
+                       annot=True)
+            plt.savefig(
+                os.path.join(os.path.dirname(__file__), RESULTS_FOLDER, "socio_{}_heatmap_zoomin.png".format(method)),
+                dpi=500)
+            plt.tight_layout()
             plt.close()
         """
         # pair plot
